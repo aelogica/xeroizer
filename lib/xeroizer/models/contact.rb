@@ -41,7 +41,9 @@ module Xeroizer
       has_many  :contact_groups
       
       validates_presence_of :name
-      validates :email_address, presence: {message: "Invalid email", allow_blank: true}
+      validates :email_address, :message => "Invalid email format" do
+        self.email_address =~ /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i
+      end
       validates_inclusion_of :contact_status, :in => CONTACT_STATUS.keys, :allow_blanks => true
       
     end
