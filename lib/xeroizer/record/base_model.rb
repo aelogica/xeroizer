@@ -153,6 +153,11 @@ module Xeroizer
               response = parse_response(self.send(http_method, request, {:summarizeErrors => false}))
               response.response_items.each_with_index do |record, i|
                 if record and record.is_a?(model_class)
+                  if model_class == Xeroizer::Record::CreditNote
+                    record.attributes.delete :sub_total
+                    record.attributes.delete :total_tax
+                    record.attributes.delete :total
+                  end
                   records[i].attributes = record.attributes
                   records[i].saved!
                 end
