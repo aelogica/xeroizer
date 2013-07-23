@@ -105,7 +105,12 @@ module Xeroizer
           parent.mark_clean(self)
           true
         end
+        
+        def to_json(*args)
+          to_h.to_json(*args)
+        end
 
+        # Deprecated
         def as_json(options = {})
           to_h.to_json
         end
@@ -131,7 +136,7 @@ module Xeroizer
           request = to_xml
           log "[CREATE SENT] (#{__FILE__}:#{__LINE__}) #{request}"
           
-          response = parent.http_put(request)
+          response = parent.http_post(request)
           log "[CREATE RECEIVED] (#{__FILE__}:#{__LINE__}) #{response}"
           
           parse_save_response(response)

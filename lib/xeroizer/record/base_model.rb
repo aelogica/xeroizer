@@ -18,7 +18,9 @@ module Xeroizer
       class_inheritable_attributes :xml_root_name
       class_inheritable_attributes :optional_xml_root_name
       class_inheritable_attributes :xml_node_name
-      
+
+      DEFAULT_RECORDS_PER_BATCH_SAVE = 2000
+
       include BaseModelHttpProxy
 
       attr_reader :application
@@ -138,7 +140,7 @@ module Xeroizer
           result
         end
 
-        def batch_save
+        def batch_save(chunk_size = DEFAULT_RECORDS_PER_BATCH_SAVE)
           @objects = {}
           @allow_batch_operations = true
 
@@ -149,18 +151,20 @@ module Xeroizer
             return false unless objects.all?(&:valid?)
             actions = objects.group_by {|o| o.new_record? ? :http_put : :http_post }
             actions.each_pair do |http_method, records|
-              request = to_bulk_xml(records)
-              response = parse_response(self.send(http_method, request, {:summarizeErrors => false}))
-              response.response_items.each_with_index do |record, i|
-                if record and record.is_a?(model_class)
-                  if model_class == Xeroizer::Record::CreditNote
-                    record.attributes.delete :sub_total
-                    record.attributes.delete :total_tax
-                    record.attributes.delete :total
+              records.each_slice(chunk_size) do |some_records|
+                request = to_bulk_xml(some_records)
+                response = parse_response(self.send(http_method, request, {:summarizeErrors => false}))
+                response.response_items.each_with_index do |record, i|
+                  if record and record.is_a?(model_class)
+                    if model_class == Xeroizer::Record::CreditNote
+                      record.attributes.delete :sub_total
+                      record.attributes.delete :total_tax
+                      record.attributes.delete :total
+                    end
+                    some_records[i].attributes = record.attributes
+                    some_records[i].errors = record.errors
+                    some_records[i].saved!
                   end
-                  records[i].attributes = record.attributes
-                  records[i].errors = record.errors
-                  records[i].saved!
                 end
               end
             end
